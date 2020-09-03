@@ -5,8 +5,7 @@ import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.io.OutputStream;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.dekker.csp.model.Transaction;
@@ -15,7 +14,7 @@ import org.dekker.csp.validation.TransactionValidator;
 
 /**
  * Processor reading all {@link Transaction}s from the given {@link InputStream}, validating them and printing
- * any failures to the console.
+ * any failures to the provided {@link OutputStream}
  * <p>
  * Should be constructed with an {@link ObjectReader} matching the {@link InputStream}
  */
@@ -26,17 +25,16 @@ public class CustomerStatementProcessor {
 
     /**
      * Iterates over the {@link InputStream} of {@link Transaction}s, validates them and prints out any potential
-     * validation errors.
+     * validation errors in the provided {@link OutputStream}
      *
      * @param source input stream to be processed
-     * @return map of {@link Transaction} and validation results
+     * @param sink   output stream to receive the validation errors
      * @throws IOException whenever the stream cannot be read
      */
-    public Map<Transaction, Boolean> process(InputStream source) throws IOException {
+    public void process(InputStream source, OutputStream sink) throws IOException {
         Objects.requireNonNull(source);
 
         TransactionValidator validator = new TransactionValidator();
-        Map<Transaction, Boolean> transactions = new LinkedHashMap<>();
 
         MappingIterator<Transaction> iterator = reader.readValues(source);
         while (iterator.hasNextValue()) {
@@ -46,13 +44,10 @@ public class CustomerStatementProcessor {
 
             try {
                 validator.validate(transaction);
-                transactions.put(transaction, true);
             } catch (TransactionValidationException e) {
-                System.out.printf("Validation error at line %d: %s%n", location.getLineNr(), e.getMessage());
-                transactions.put(transaction, false);
+                sink.write(String.format("Validation error at line %d: %s%n",
+                        location.getLineNr(), e.getMessage()).getBytes());
             }
         }
-
-        return transactions;
     }
 }

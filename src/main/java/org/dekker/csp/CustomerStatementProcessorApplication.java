@@ -14,12 +14,13 @@ public final class CustomerStatementProcessorApplication {
 
         String fileName = args[0];
 
+        // We create the InputStream and matching ObjectReader separately based on file extension
+        // In the real world, the InputStream can come from any source, not just files
         ObjectReader reader = ReaderFactory.getReader(fileName);
-
         CustomerStatementProcessor processor = new CustomerStatementProcessor(reader);
 
         try (InputStream source = CustomerStatementProcessorApplication.class.getClassLoader().getResourceAsStream(fileName)) {
-            processor.process(source);
+            processor.process(source, System.out);
         }
     }
 }
